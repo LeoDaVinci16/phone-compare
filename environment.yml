@@ -1,0 +1,15 @@
+# Conda environment for phone-compare.
+# Create it once with:   conda env create -f environment.yml
+# Update it later with:  conda env update -f environment.yml --prune
+name: phone-compare
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pandas
+  - matplotlib
+  - jinja2
+  - pytest
+  - pip
+  - pip:
+      - -e .          # installs this project itself, so the `phone-compare` command exists

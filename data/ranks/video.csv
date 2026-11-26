@@ -1,0 +1,6 @@
+value,rank,score,details
+8K@30 + 4K@120,1,,8K and 4K slow motion
+8K@30,2,,4K up to 60 fps
+4K@120,2,,"4K slow motion, no 8K"
+4K@60,3,,
+4K@30,4,,

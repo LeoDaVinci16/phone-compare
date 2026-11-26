@@ -1,0 +1,4 @@
+value,rank,score,details
+USB 3,1,,"5-10 Gb/s cable transfers, often video out"
+USB 2.0,2,,0.48 Gb/s: slow cable transfers
+Unknown,2,,Not stated by the maker: assume USB 2.0

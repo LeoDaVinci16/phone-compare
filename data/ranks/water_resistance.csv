@@ -1,0 +1,10 @@
+value,rank,score,details
+IP68/IP69,1,,"Dust tight, can be submerged, survives high-pressure jets"
+IP68,2,,"Dust tight, can be submerged (1.5-6 m for 30 min)"
+IP67,3,,Can be submerged 1 m
+IP65,4,,Water jets
+IP64,4,,Splashes only
+IP55,5,,Rain and low-pressure jets
+IP54,5,,Splashes
+IP53,6,,Light spray and rain
+None,7,,

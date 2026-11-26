@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phone comparison</title>
+<style>
+  :root { --base:#E07B39; --other:#4C72B0; --better:#E2EFDA; --better-t:#2E6B2E; --worse:#FADBD8; --worse-t:#9C0006;
+          --miss:#FCE4D6; --miss-t:#9C5700; --line:#e3e6eb; --muted:#6b7280; --good:#2E8B57; --bad:#C0392B; --accent:#1f2937; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; color:#1f2937; background:#fafbfc; }
+  header { background:var(--accent); color:#fff; padding: 18px 32px 0; }
+  header h1 { margin:0 0 4px; font-size: 22px; }
+  header p { margin:0 0 12px; color:#cbd5e1; font-size: 13px; }
+  .tabs { display:flex; gap: 4px; }
+  .tabs button { background: transparent; color:#cbd5e1; border:0; padding: 10px 16px; font-size: 14px; cursor:pointer;
+                 border-radius: 8px 8px 0 0; font-weight: 600; }
+  .tabs button:hover { color:#fff; }
+  .tabs button.active { background:#fafbfc; color:#1f2937; }
+  .tabs .count { font-weight: 400; font-size: 12px; opacity: .8; }
+  .bar { position: sticky; top:0; background:#fff; border-bottom:1px solid var(--line); padding: 10px 32px; z-index:10;
+         display:flex; gap: 24px; align-items:center; flex-wrap: wrap; font-size:13px; }
+  .bar label { font-weight: 600; }
+  .bar select { font-size: 14px; padding: 5px 8px; border: 2px solid var(--base); border-radius: 6px; background:#FFF8F1; font-weight:600; }
+  .bar nav a { margin-right: 14px; color:#374151; text-decoration:none; }
+  .bar nav a:hover { text-decoration: underline; }
+  main { padding: 8px 32px 48px; max-width: 1500px; }
+  section.tab { display:none; } section.tab.active { display:block; }
+  h2 { margin-top: 32px; border-bottom: 2px solid var(--line); padding-bottom: 6px; }
+  h3 { margin: 24px 0 8px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .scroll { overflow-x: auto; border:1px solid var(--line); border-radius: 8px; background:#fff; }
+  table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+  th, td { padding: 6px 9px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th { background:#eef2f7; text-align: center; white-space: normal; min-width: 64px; }
+  td:first-child, th:first-child { text-align: left; position: sticky; left: 0; background: #fff; font-weight: 600; z-index:1; }
+  th:first-child { background:#eef2f7; z-index:2; }
+  tr.base td { background: #FFF2CC !important; }
+  td.better { background: var(--better); color: var(--better-t); }
+  td.worse  { background: var(--worse);  color: var(--worse-t); }
+  td.missing{ background: var(--miss);   color: var(--miss-t); font-weight:600; }
+  td.text { text-align:left; }
+  td.heat { text-align:center; color:#111; }
+  .alerts { border-radius: 8px; padding: 12px 16px; margin: 18px 0; }
+  .alerts.ok { background: var(--better); color: var(--better-t); }
+  .alerts.bad { background: var(--miss); color: var(--miss-t); }
+  .alerts.info { background: #EAF1FB; color: #1d4e89; }
+  .alerts li { margin: 6px 0; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(620px, 1fr)); gap: 18px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .card h4 { margin: 0 0 4px; font-size: 14px; }
+  .phone { background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 18px 0; }
+  .phone.isbase { border-color: var(--base); border-width: 2px; }
+  .phone .cols { display:grid; grid-template-columns: minmax(380px, 1.3fr) minmax(320px, 1fr); gap: 24px; align-items:start; }
+  dl { display:grid; grid-template-columns: max-content 1fr; gap: 3px 14px; font-size: 12.5px; margin: 6px 0 12px; }
+  dt { color: var(--muted); }
+  .adv { display:grid; grid-template-columns: 150px 1fr; gap: 4px 10px; font-size: 12px; align-items:center; }
+  .adv .track { position: relative; height: 18px; background: linear-gradient(to right, transparent calc(50% - .5px), #999 calc(50% - .5px), #999 calc(50% + .5px), transparent calc(50% + .5px)); }
+  .adv .fill { position:absolute; top:3px; height:12px; border-radius: 2px; }
+  .adv .lbl { position:absolute; top:1px; font-size: 11px; white-space: nowrap; }
+  .legend span { display:inline-block; padding: 2px 8px; border-radius: 4px; margin-right: 6px; font-size: 12px; }
+  svg text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  /* selector tabs */
+  .tools { display:flex; gap: 8px; flex-wrap: wrap; align-items:center; margin: 14px 0; }
+  .btn { border:1px solid #cbd2db; background:#fff; padding: 6px 12px; border-radius: 6px; cursor:pointer; font-size: 13px; }
+  .btn:hover { background:#f2f4f7; }
+  .btn.primary { background: var(--accent); color:#fff; border-color: var(--accent); }
+  .btn.primary:hover { background:#374151; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .tools input[type=search] { padding: 6px 10px; border:1px solid #cbd2db; border-radius: 6px; min-width: 240px; font-size: 13px; }
+  table.pick td, table.pick th { text-align:left; }
+  table.pick tr.off td { color:#9aa1ab; }
+  table.pick tr { cursor: pointer; }
+  table.pick td:first-child { width: 36px; }
+  input[type=checkbox] { width: 16px; height: 16px; cursor:pointer; accent-color: var(--accent); }
+  .spec-groups { display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .spec-groups .card label { display:flex; gap: 8px; align-items: center; padding: 4px 0; cursor:pointer; font-size: 13.5px; }
+  .spec-groups .card label.off { color:#9aa1ab; }
+  .site-footer { max-width: 1400px; margin: 40px auto 0; padding: 18px 32px 30px; border-top: 1px solid #e2e8f0; color:#64748b; font-size: 12.5px; }
+  .site-footer p { margin: 4px 0; }
+  .tag { display:inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; background:#eef2f7; color:#475569; }
+  /* add form */
+  form.add { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px 20px; background:#fff;
+             border:1px solid var(--line); border-radius: 10px; padding: 18px; }
+  form.add .field { display:flex; flex-direction: column; gap: 4px; }
+  form.add .field.wide { grid-column: 1 / -1; }
+  form.add label { font-weight: 600; font-size: 13px; }
+  form.add input, form.add textarea { padding: 7px 9px; border:1px solid #cbd2db; border-radius: 6px; font-size: 13.5px; font-family: inherit; }
+  form.add input:focus, form.add textarea:focus { outline: 2px solid #93c5fd; border-color: #93c5fd; }
+  form.add .hint { font-size: 11.5px; color: var(--muted); }
+  form.add .newrank { display:none; background:#FFF8F1; border:1px dashed var(--base); border-radius: 6px; padding: 8px; gap: 6px;
+                      grid-template-columns: 1fr 1fr; font-size: 12px; }
+  form.add .newrank.show { display:grid; }
+  form.add .newrank .full { grid-column: 1 / -1; color: var(--miss-t); }
+  form.add .newrank input { padding: 5px 7px; font-size: 12.5px; }
+  form.add .actions { grid-column: 1 / -1; display:flex; gap: 10px; align-items:center; flex-wrap: wrap; }
+  pre.row { background:#f6f8fa; border:1px solid var(--line); padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; font-size: 12px; }
+  #toast { position: fixed; right: 20px; bottom: 20px; max-width: 520px; padding: 12px 16px; border-radius: 8px; color:#fff;
+           background:#1f2937; box-shadow: 0 6px 24px rgba(0,0,0,.2); display:none; z-index: 50; font-size: 13.5px; white-space: pre-line; }
+  .tab-sep { width: 1px; background: #475569; margin: 8px 10px; }
+  .bar.hidden { display:none; }
+  .hero { display:flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; margin: 22px 0 14px;
+          background:#fff; border:1px solid var(--line); border-left: 6px solid var(--base); border-radius: 12px; padding: 18px 22px; }
+  .hero-base { font-size: 24px; font-weight: 700; margin: 2px 0; }
+  .tiles { display:flex; gap: 12px; flex-wrap: wrap; }
+  .tile { background:#f6f8fb; border-radius: 10px; padding: 10px 16px; min-width: 120px; text-align:center; }
+  .tile b { display:block; font-size: 24px; }
+  .tile span { font-size: 12px; color: var(--muted); }
+  .tile.bad { background: var(--miss); color: var(--miss-t); }
+  .tile.ok { background: var(--better); color: var(--better-t); }
+  .highlights { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin: 6px 0 14px; }
+  .hl { background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .hl .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .hl .v { font-size: 15px; font-weight: 700; margin: 4px 0 2px; }
+  .hl .d { font-size: 12.5px; color:#374151; }
+  .shortcuts { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-bottom: 8px; }
+  .shortcut { display:block; text-decoration:none; color:inherit; background:#fff; border:1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .shortcut:hover { border-color: var(--other); box-shadow: 0 2px 10px rgba(76,114,176,.12); }
+  .shortcut b { display:block; color: var(--other); margin-bottom: 2px; }
+  .shortcut span { font-size: 12.5px; color: var(--muted); }
+  table.pick td.act { width: 70px; text-align:right; }
+  .btn.small { padding: 3px 10px; font-size: 12px; }
+  @media (max-width: 900px) { .phone .cols { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Phone comparison</h1>
+  <p>generated {{ generated }} · data: {{ data_dir }}{% if server_mode %} · <strong>app mode</strong> (you can edit the data){% endif %}</p>
+  <div class="tabs">
+    <button data-tab="home" class="active">Home</button>
+    <button data-tab="perspec">Per spec</button>
+    <button data-tab="perphone">Per phone</button>
+    <span class="tab-sep"></span>
+    <button data-tab="phones">Phones <span class="count" id="count-phones"></span></button>
+    <button data-tab="specs">Specs <span class="count" id="count-specs"></span></button>
+    <button data-tab="add" id="add-tab-btn">Add phone</button>
+  </div>
+</header>
+
+<!-- base selector: shown on Home, Per spec and Per phone -->
+<div class="bar" id="base-bar">
+  <div><label for="base">Base phone:</label> <select id="base"></select></div>
+  <nav id="home-nav"><a href="#" data-jump="summary">Summary</a><a href="#" data-jump="comparison">Comparison</a>
+    <a href="#" data-jump="values">Values</a><a href="#" data-jump="overview">Overview</a></nav>
+  <span class="muted" id="sel-summary"></span>
+</div>
+
+<!-- ================================================================== HOME -->
+<section class="tab active" id="tab-home"><main>
+  <div class="hero">
+    <div>
+      <div class="muted">Comparing against</div>
+      <div class="hero-base basename"></div>
+      <div class="muted" id="hero-sub"></div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><b id="tile-phones"></b><span>phones selected</span></div>
+      <div class="tile"><b id="tile-specs"></b><span>specs compared</span></div>
+      <div class="tile" id="tile-issues-box"><b id="tile-issues"></b><span>data issues</span></div>
+    </div>
+  </div>
+  <div class="highlights" id="highlights"></div>
+  <div class="shortcuts">
+    <a href="#" data-goto="perspec" class="shortcut"><b>Per spec →</b><span>every phone sorted low → high for each spec</span></a>
+    <a href="#" data-goto="perphone" class="shortcut"><b>Per phone →</b><span>each phone vs the base, with radar charts</span></a>
+    <a href="#" data-goto="phones" class="shortcut"><b>Phones →</b><span>choose which to compare, or edit one</span></a>
+    <a href="#" data-goto="add" class="shortcut"><b>Add phone →</b><span>fill in a form{% if not server_mode %} (app mode){% endif %}</span></a>
+  </div>
+
+  <h2 id="summary">Summary</h2>
+  <div id="issues"></div>
+  <h3>Best phone for each spec <span class="muted">(among the phones you selected)</span></h3>
+  <div class="scroll"><table id="best"></table></div>
+
+  <h2 id="comparison">Comparison vs <span class="basename"></span></h2>
+  <p class="legend muted">
+    <span style="background:var(--better);color:var(--better-t)">better than base</span>
+    <span style="background:var(--worse);color:var(--worse-t)">worse than base</span>
+    <span style="background:var(--miss);color:var(--miss-t)">needs a rank / type</span>
+    % = difference vs the base. Price and weight: lower is better. Ranked specs without a score show better/worse by rank.
+  </p>
+  <div class="scroll"><table id="comp"></table></div>
+
+  <h2 id="values">Spec values</h2>
+  <div class="scroll"><table id="values-table"></table></div>
+
+  <h2 id="overview">Overview</h2>
+  <p class="muted">Each spec scored 0–100 among the selected phones (100 = best for that spec, 0 = worst). Grey = no data.</p>
+  <div class="scroll"><table id="heat"></table></div>
+</main></section>
+
+<!-- ================================================================== PER SPEC -->
+<section class="tab" id="tab-perspec"><main>
+  <h2>Per spec</h2>
+  <p class="muted">By default each chart is sorted by its own values (price from cheap to expensive, chipset from slow to fast…).
+    Pick a spec in <b>Sort phones by</b> to use the same phone order in every chart. The base is orange; hover over a point or
+    bar to see its value. Choose specs in the <a href="#" data-goto="specs">Specs</a> tab.</p>
+  <div class="tools">
+    <label for="sort-by"><b>Sort phones by:</b></label>
+    <select id="sort-by" class="btn"></select>
+    <button class="btn" id="sort-dir" title="Reverse the order">↑ low → high</button>
+    <span class="muted" id="sort-hint"></span>
+  </div>
+  <div class="grid" id="spec-charts"></div>
+</main></section>
+
+<!-- ================================================================== PER PHONE -->
+<section class="tab" id="tab-perphone"><main>
+  <h2>Per phone</h2>
+  <p class="muted">Left: advantage over the base for each spec (green = better). Right: 0–100 scores of the phone (blue) against the base (orange).</p>
+  <div class="tools"><label for="jump-phone" class="muted">Jump to:</label> <select id="jump-phone" class="btn"></select></div>
+  <div id="phone-cards"></div>
+</main></section>
+
+<!-- ================================================================== PHONES -->
+<section class="tab" id="tab-phones"><main>
+  <h2>Phones</h2>
+  <p class="muted">Untick phones to take them out of every table and chart (handy when the list grows, or when you are down to a few
+    finalists). Click a row to toggle it. Use <b>Edit</b> to correct a phone's specs.</p>
+  <div class="tools">
+    <button class="btn" data-phones="all">Select all</button>
+    <button class="btn" data-phones="none">Select none</button>
+    <button class="btn" data-phones="invert">Invert</button>
+    <input type="search" id="phone-filter" placeholder="Filter by name, chipset…">
+    <span class="muted" id="phone-count"></span>
+    <span style="flex:1"></span>
+    <button class="btn primary save-sel" {% if not server_mode %}disabled title="Open the report with run_app.bat to save"{% endif %}>Save as default</button>
+  </div>
+  <div class="scroll"><table class="pick" id="pick-phones"></table></div>
+  <p class="muted save-note"></p>
+</main></section>
+
+<!-- ================================================================== SPECS -->
+<section class="tab" id="tab-specs"><main>
+  <h2>Which specs to take into account</h2>
+  <p class="muted">Untick specs you don't care about: they disappear from the comparison, the charts, the 0–100 scores and the
+    "best phone" table.</p>
+  <div class="tools">
+    <button class="btn" data-specs="all">Select all</button>
+    <button class="btn" data-specs="none">Select none</button>
+    <span class="muted" id="spec-count"></span>
+    <span style="flex:1"></span>
+    <button class="btn primary save-sel" {% if not server_mode %}disabled title="Open the report with run_app.bat to save"{% endif %}>Save as default</button>
+  </div>
+  <div class="spec-groups" id="pick-specs"></div>
+  <p class="muted save-note"></p>
+</main></section>
+
+<!-- ================================================================== ADD / EDIT -->
+<section class="tab" id="tab-add"><main>
+  <h2 id="add-title">Add a phone</h2>
+  <div id="edit-banner" class="alerts info" style="display:none"></div>
+  {% if server_mode %}
+  <p class="muted" id="add-help">Fill in what you know (only the name is required) and press <b>Add phone</b>. It is added at the end of
+    <code>data/phones.csv</code>. If you type a chipset (or another ranked value) that isn't known yet, extra boxes appear to rank it,
+    and it is added to its rank file too.</p>
+  {% else %}
+  <div class="alerts info"><b>To add or edit phones from here, open the report in app mode:</b> double-click <code>run_app.bat</code>
+    (or run <code>phone-compare --serve</code>). This file is a static copy and can't change your CSV files.<br>
+    You can still fill in the form and press <b>Copy CSV row</b> to paste the line into <code>data/phones.csv</code> yourself.</div>
+  {% endif %}
+  <form class="add" id="add-form" autocomplete="off"></form>
+  <div id="add-result"></div>
+</main></section>
+
+<footer class="site-footer">
+  <p><b>Built mostly by Claude</b> (an AI by Anthropic). The idea, requirements and feedback came from the project owner;
+  Claude wrote most of the code. Phone prices and specs were collected from shop listings and benchmark sites and may be out of date or wrong:
+  check them before buying.</p>
+  <p>Want to use it with your own phones? Download the project and edit the CSV files offline.
+  Ideas for a JavaScript-only version or hosting it on a server: contact <a href="mailto:arnaucnadal@disroot.org">arnaucnadal@disroot.org</a>.</p>
+  <p>Code under the MIT License. Data provided as is, with no guarantee that it is correct or up to date.</p>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+const DATA = {{ data_json|safe }};
+const SERVER = DATA.serverMode;
+
+// ================================================================== helpers
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => [...document.querySelectorAll(sel)];
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs = {}, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function wrap(text, width) {
+  const words = String(text).split(" "); const lines = []; let cur = "";
+  for (const w of words) { if ((cur + " " + w).trim().length > width && cur) { lines.push(cur); cur = w; } else cur = (cur + " " + w).trim(); }
+  if (cur) lines.push(cur); return lines;
+}
+function multiline(svg, x, y, lines, attrs = {}) {
+  const t = el("text", { x, y, ...attrs });
+  lines.forEach((l, i) => t.appendChild(el("tspan", { x, dy: i === 0 ? 0 : "1.15em" }, l)));
+  svg.appendChild(t); return t;
+}
+function fmt(v) {
+  if (v === null || v === undefined || Number.isNaN(v)) return "";
+  return Math.abs(v) >= 100 ? Math.round(v).toLocaleString("en") : String(+v.toFixed(2));
+}
+function niceStep(range, n) {
+  const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw);
+}
+const short = (t, n) => (t.length > n ? t.slice(0, n - 1) + "…" : t);
+function toast(msg, ms = 4000) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => (t.style.display = "none"), ms); }
+async function api(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({ ok: false, error: "The app didn't answer. Is run_app.bat still open?" }));
+  if (!r.ok || !j.ok) throw new Error(j.error || "Something went wrong");
+  return j;
+}
+
+// ================================================================== state: selection + base
+const state = {
+  phones: new Set(DATA.phones.filter((n) => !DATA.selection.phones_off.includes(n))),
+  specs: new Set(DATA.columns.filter((s) => !DATA.selection.specs_off.includes(s))),
+  base: DATA.defaultBase,
+  editing: null,          // name of the phone loaded in the form with Edit (null = empty form)
+  sortBy: "own",          // Per spec order: "own" (each chart by its values), "name", "file", or a spec name
+  sortDir: 1,             // 1 = low → high, -1 = high → low
+};
+if (state.phones.size === 0) DATA.phones.forEach((n) => state.phones.add(n));
+const activePhones = () => DATA.phones.filter((n) => state.phones.has(n));
+const activeCompared = () => DATA.compared.filter((s) => state.specs.has(s));
+const activeCharted = () => DATA.charted.filter((s) => state.specs.has(s.name));
+const activeColumns = () => DATA.columns.filter((s) => state.specs.has(s));
+
+// 0–100 score among the SELECTED phones (recomputed whenever the selection changes)
+function goodness(phones) {
+  const out = {};
+  for (const spec of activeCharted()) {
+    const q = DATA.quantity[spec.name];
+    const vals = phones.map((n) => q[n]).filter((v) => v !== null);
+    if (!vals.length) continue;
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    out[spec.name] = {};
+    for (const n of phones) {
+      if (q[n] === null) { out[spec.name][n] = null; continue; }
+      let g = hi === lo ? 100 : (q[n] - lo) / (hi - lo) * 100;
+      if (spec.compare === "lower") g = 100 - g;
+      out[spec.name][n] = g;
+    }
+  }
+  return out;
+}
+
+// ================================================================== report
+function renderIssues() {
+  const box = $("#issues");
+  if (!DATA.issues.length) { box.innerHTML = '<div class="alerts ok">✅ Every spec has a type and every ranked value has a rank.</div>'; return; }
+  box.innerHTML = `<div class="alerts bad"><strong>⚠ ${DATA.issues.length} thing(s) to fix in the data</strong> (affected cells are orange):<ul>` +
+    DATA.issues.map((i) => `<li>${esc(i.message)}<br><span class="muted">→ ${esc(i.fix)}</span></li>`).join("") + "</ul></div>";
+}
+function renderBaseSelect() {
+  const sel = $("#base"), phones = activePhones();
+  if (!phones.includes(state.base)) state.base = phones[0];
+  sel.innerHTML = phones.map((n) => `<option${n === state.base ? " selected" : ""}>${esc(n)}</option>`).join("");
+  $$(".basename").forEach((s) => (s.textContent = state.base));
+  const off = DATA.phones.length - phones.length, offS = DATA.columns.length - activeColumns().length;
+  $("#sel-summary").textContent = (off || offS) ? `Showing ${phones.length}/${DATA.phones.length} phones, ${activeColumns().length}/${DATA.columns.length} specs` : "";
+  $("#count-phones").textContent = `(${phones.length}/${DATA.phones.length})`;
+  $("#count-specs").textContent = `(${activeColumns().length}/${DATA.columns.length})`;
+  $("#tile-phones").textContent = `${phones.length}/${DATA.phones.length}`;
+  $("#tile-specs").textContent = `${activeCompared().length}/${DATA.compared.length}`;
+  $("#tile-issues").textContent = DATA.issues.length;
+  $("#tile-issues-box").className = "tile " + (DATA.issues.length ? "bad" : "ok");
+  const cpuCol = DATA.columns.find((c) => /chip|cpu|soc/i.test(c));
+  $("#hero-sub").textContent = [cpuCol && DATA.values[state.base][cpuCol], DATA.values[state.base][DATA.columns[0]]]
+    .filter(Boolean).join(" · ");
+}
+function renderHighlights(g) {
+  // up to 4 specs that have a single clear winner among the selected phones, in column order
+  const phones = activePhones(), cards = [];
+  for (const s of Object.keys(g)) {
+    const vals = phones.filter((n) => g[s][n] !== null);
+    if (vals.length < 2) continue;
+    const top = Math.max(...vals.map((n) => g[s][n])), winners = vals.filter((n) => g[s][n] === top);
+    if (winners.length !== 1) continue;
+    const w = winners[0], cell = DATA.comp[state.base][w][s];
+    const vs = w === state.base ? "this is the base" : `${cell[0]} vs base`;
+    cards.push(`<div class="hl"><div class="k">Best ${esc(s)}</div><div class="v">${esc(w)}</div>
+      <div class="d">${esc(DATA.values[w][s])} · <span style="color:${cell[1] > 0 ? "var(--good)" : "#555"}">${esc(vs)}</span></div></div>`);
+    if (cards.length === 4) break;
+  }
+  $("#highlights").innerHTML = cards.join("");
+}
+function renderBest(g) {
+  const phones = activePhones();
+  let html = "<tr><th>Spec</th><th>Best</th><th>Value</th></tr>";
+  for (const s of Object.keys(g)) {
+    const vals = phones.filter((n) => g[s][n] !== null);
+    if (!vals.length) continue;
+    const top = Math.max(...vals.map((n) => g[s][n]));
+    const winners = vals.filter((n) => g[s][n] === top), losers = vals.filter((n) => g[s][n] !== top);
+    const best = !losers.length ? "All (tie)" : winners.length > 3 ? "All except " + losers.join(", ") : winners.join(", ");
+    html += `<tr><td>${esc(s)}</td><td class="text">${esc(best)}</td><td>${esc(DATA.values[winners[0]][s])}</td></tr>`;
+  }
+  $("#best").innerHTML = html;
+}
+function renderComparison() {
+  const specs = activeCompared(), base = state.base;
+  let html = "<tr><th>Phone</th>" + specs.map((s) => `<th>${esc(s)}</th>`).join("") + "</tr>";
+  for (const n of activePhones()) {
+    const row = DATA.comp[base][n];
+    html += `<tr class="${n === base ? "base" : ""}"><td>${esc(n)}${n === base ? " (base)" : ""}</td>`;
+    for (const s of specs) {
+      const [text, verdict, , status] = row[s];
+      const cls = status === "missing" ? "missing" : verdict > 0 ? "better" : verdict < 0 ? "worse" : "";
+      html += `<td class="${cls}">${esc(text)}</td>`;
+    }
+    html += "</tr>";
+  }
+  $("#comp").innerHTML = html;
+}
+function renderValues() {
+  const cols = activeColumns().filter((c) => !(DATA.specTypes[c] === "info" && DATA.phones.some((n) => String(DATA.values[n][c]).length > 40)));
+  let html = "<tr><th>Phone</th>" + cols.map((s) => `<th>${esc(s)}</th>`).join("") + "</tr>";
+  for (const n of activePhones()) {
+    html += `<tr class="${n === state.base ? "base" : ""}"><td>${esc(n)}</td>`;
+    for (const c of cols) {
+      const v = DATA.values[n][c], miss = DATA.comp[state.base][n][c] && DATA.comp[state.base][n][c][3] === "missing";
+      const isText = !/^[\d.,]*$/.test(v) && DATA.specTypes[c] === "info";
+      html += `<td class="${miss ? "missing" : isText ? "text" : ""}">${esc(v)}</td>`;
+    }
+    html += "</tr>";
+  }
+  $("#values-table").innerHTML = html;
+}
+function heatColor(v) {                       // red → yellow → green, softened
+  if (v === null) return "#EEEEEE";
+  const stops = [[215, 48, 39], [254, 224, 139], [26, 152, 80]];
+  const t = Math.max(0, Math.min(1, v / 100)) * 2, i = Math.min(1, Math.floor(t)), f = t - i;
+  const c = stops[i].map((a, k) => Math.round(a + (stops[i + 1][k] - a) * f));
+  return `rgb(${c.map((x) => Math.round(x + (255 - x) * 0.35)).join(",")})`;
+}
+function renderHeat(g) {
+  const specs = Object.keys(g);
+  let html = "<tr><th>Phone</th>" + specs.map((s) => `<th>${esc(s)}</th>`).join("") + "</tr>";
+  for (const n of activePhones()) {
+    html += `<tr class="${n === state.base ? "base" : ""}"><td>${esc(n)}</td>` +
+      specs.map((s) => { const v = g[s][n]; return `<td class="heat" style="background:${heatColor(v)}">${v === null ? "" : Math.round(v)}</td>`; }).join("") + "</tr>";
+  }
+  $("#heat").innerHTML = html;
+}
+// one order for every chart: by the chosen spec / name / file order (phones without a value go last)
+function globalOrder(phones) {
+  const dir = state.sortDir, key = state.sortBy;
+  if (key === "file") return dir > 0 ? [...phones] : [...phones].reverse();
+  if (key === "name") return [...phones].sort((a, b) => dir * a.localeCompare(b));
+  const q = DATA.quantity[key] || {};
+  return [...phones].sort((a, b) => {
+    const qa = q[a], qb = q[b];
+    if (qa === null || qa === undefined) return (qb === null || qb === undefined) ? 0 : 1;
+    if (qb === null || qb === undefined) return -1;
+    return dir * (qa - qb) || DATA.phones.indexOf(a) - DATA.phones.indexOf(b);
+  });
+}
+function specChart(spec, base, phones) {
+  const q = DATA.quantity[spec.name];
+  const names = state.sortBy === "own"
+    ? phones.filter((n) => q[n] !== null).sort((a, b) => state.sortDir * (q[a] - q[b]))
+    : globalOrder(phones).filter((n) => q[n] !== null);
+  const missing = phones.filter((n) => q[n] === null);
+  const W = 640, H = 360, L = spec.ranked && !spec.usesScore ? 110 : 84, R = 16, T = 34, B = 104;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%" });
+  const pw = W - L - R, ph = H - T - B, step = pw / Math.max(names.length, 1);
+  const xs = (i) => L + step * (i + 0.5);
+  const vals = names.map((n) => q[n]);
+  if (!vals.length) return null;
+  let lo, hi, tick = 1;
+  if (spec.ranked && !spec.usesScore) { lo = 0; hi = Math.max(...spec.tiers.map((t) => t.tier), ...vals) + 0.6; }
+  else {
+    const mn = spec.ranked ? 0 : Math.min(...vals), mx = Math.max(...vals);
+    const span = (mx - mn) || Math.abs(mx) * 0.2 || 1;
+    tick = niceStep(span * 1.25, 4);
+    lo = spec.ranked ? 0 : Math.floor((mn - span * 0.08) / tick) * tick;
+    hi = Math.ceil((mx + span * 0.12) / tick) * tick;
+    if (!spec.ranked && mn >= 0 && lo < 0) lo = 0;
+  }
+  const ys = (v) => T + ph - (v - lo) / (hi - lo) * ph;
+  if (spec.ranked && !spec.usesScore) {
+    for (const t of spec.tiers) {
+      const y = ys(t.tier);
+      svg.appendChild(el("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#eee" }));
+      multiline(svg, L - 6, y + 3, wrap(t.label, 16), { "text-anchor": "end", "font-size": 10, fill: "#555" });
+    }
+  } else {
+    for (let v = lo; v <= hi + tick * 0.01; v += tick) {
+      const y = ys(v);
+      svg.appendChild(el("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#eee" }));
+      svg.appendChild(el("text", { x: L - 6, y: y + 3, "text-anchor": "end", "font-size": 10, fill: "#777" }, fmt(v)));
+    }
+  }
+  svg.appendChild(el("line", { x1: L, x2: W - R, y1: T + ph, y2: T + ph, stroke: "#333" }));
+  if (spec.ranked) {
+    names.forEach((n, i) => {
+      const y = ys(q[n]), bw = Math.min(step * 0.65, 60);
+      const r = el("rect", { x: xs(i) - bw / 2, y, width: bw, height: T + ph - y, fill: n === base ? "#E07B39" : "#4C72B0", rx: 2 });
+      r.appendChild(el("title", {}, `${n}\n${DATA.values[n][spec.name]}${spec.usesScore ? " · score " + fmt(q[n]) : ""}`));
+      svg.appendChild(r);
+      const lines = wrap(DATA.values[n][spec.name], Math.max(8, Math.floor(step / 6))).slice(0, 3);
+      multiline(svg, xs(i), y - 5 - 11 * (lines.length - 1), lines, { "text-anchor": "middle", "font-size": 9, fill: "#333" });
+    });
+  } else {
+    svg.appendChild(el("polyline", { points: names.map((n, i) => `${xs(i)},${ys(q[n])}`).join(" "), fill: "none", stroke: "#4C72B0", "stroke-opacity": 0.55, "stroke-width": 2 }));
+    names.forEach((n, i) => {
+      const c = el("circle", { cx: xs(i), cy: ys(q[n]), r: n === base ? 7 : 5, fill: n === base ? "#E07B39" : "#4C72B0" });
+      c.appendChild(el("title", {}, `${n}\n${spec.name}: ${fmt(q[n])}`));
+      svg.appendChild(c);
+      svg.appendChild(el("text", { x: xs(i), y: ys(q[n]) - 11, "text-anchor": "middle", "font-size": 10, fill: "#333" }, fmt(q[n])));
+    });
+  }
+  names.forEach((n, i) => {
+    const x = xs(i), y = T + ph + 12;
+    const t = el("text", { x, y, transform: `rotate(-32 ${x} ${y})`, "text-anchor": "end", "font-size": 9.5,
+      fill: n === base ? "#E07B39" : "#333", "font-weight": n === base ? 700 : 400 }, short(n, 24));
+    t.appendChild(el("title", {}, n));
+    svg.appendChild(t);
+  });
+  const card = document.createElement("div"); card.className = "card";
+  const hint = spec.compare === "lower" ? "lower is better" : spec.ranked && !spec.usesScore ? "taller = better rank" : "higher is better";
+  const arrow = state.sortDir > 0 ? "low → high" : "high → low";
+  const order = state.sortBy === "own" ? `sorted ${arrow}` : state.sortBy === "name" ? "sorted by name"
+              : state.sortBy === "file" ? "in phones.csv order" : `sorted by ${state.sortBy} (${arrow})`;
+  card.innerHTML = `<h4>${esc(spec.name)} <span class="muted">· ${esc(order)} · ${hint}</span></h4>`;
+  card.appendChild(svg);
+  if (missing.length) card.insertAdjacentHTML("beforeend", `<div class="muted">No data: ${esc(missing.join(", "))}</div>`);
+  return card;
+}
+function renderSortControls() {
+  const sel = $("#sort-by"), specs = activeCharted().map((s) => s.name);
+  if (state.sortBy !== "own" && state.sortBy !== "name" && state.sortBy !== "file" && !specs.includes(state.sortBy)) state.sortBy = "own";
+  sel.innerHTML = [["own", "Each chart by its own values"], ["name", "Phone name"], ["file", "Order in phones.csv"]]
+    .map(([v, t]) => `<option value="${v}">${t}</option>`).join("") +
+    `<optgroup label="One spec for every chart">` + specs.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join("") + "</optgroup>";
+  sel.value = state.sortBy;
+  $("#sort-dir").textContent = state.sortBy === "name" ? (state.sortDir > 0 ? "↑ A → Z" : "↓ Z → A")
+                             : state.sortBy === "file" ? (state.sortDir > 0 ? "↑ first → last" : "↓ last → first")
+                             : (state.sortDir > 0 ? "↑ low → high" : "↓ high → low");
+  $("#sort-hint").textContent = state.sortBy === "own" ? "Each chart is sorted by its own spec."
+    : "Same phone order in every chart, so you can follow one phone across them.";
+}
+$("#sort-by").addEventListener("change", (e) => { state.sortBy = e.target.value; renderSortControls(); renderSpecCharts(); });
+$("#sort-dir").addEventListener("click", () => { state.sortDir *= -1; renderSortControls(); renderSpecCharts(); });
+function renderSpecCharts() {
+  renderSortControls();
+  const box = $("#spec-charts"); box.innerHTML = "";
+  for (const s of activeCharted()) { const c = specChart(s, state.base, activePhones()); if (c) box.appendChild(c); }
+  if (!box.children.length) box.innerHTML = '<p class="muted">No comparable specs selected.</p>';
+}
+function radar(phone, base, g) {
+  const specs = Object.keys(g).filter((s) => g[s][phone] !== null && g[s][base] !== null);
+  const W = 420, H = 400, cx = W / 2, cy = 195, R = 130;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%" });
+  if (specs.length < 3) { svg.appendChild(el("text", { x: 20, y: 30, fill: "#777" }, "Select at least 3 comparable specs for the radar")); return svg; }
+  const ang = (i) => -Math.PI / 2 + 2 * Math.PI * i / specs.length;
+  for (const f of [0.25, 0.5, 0.75, 1])
+    svg.appendChild(el("polygon", { points: specs.map((_, i) => `${cx + R * f * Math.cos(ang(i))},${cy + R * f * Math.sin(ang(i))}`).join(" "), fill: "none", stroke: "#e5e5e5" }));
+  specs.forEach((s, i) => {
+    svg.appendChild(el("line", { x1: cx, y1: cy, x2: cx + R * Math.cos(ang(i)), y2: cy + R * Math.sin(ang(i)), stroke: "#e5e5e5" }));
+    const lx = cx + (R + 16) * Math.cos(ang(i)), ly = cy + (R + 16) * Math.sin(ang(i));
+    const anchor = Math.abs(Math.cos(ang(i))) < 0.2 ? "middle" : Math.cos(ang(i)) > 0 ? "start" : "end";
+    multiline(svg, lx, ly, wrap(s, 14), { "text-anchor": anchor, "font-size": 9.5, fill: "#444" });
+  });
+  const shape = (n, color, op, w) => {
+    const pts = specs.map((s, i) => { const v = Math.max(g[s][n], 3) / 100; return `${cx + R * v * Math.cos(ang(i))},${cy + R * v * Math.sin(ang(i))}`; }).join(" ");
+    svg.appendChild(el("polygon", { points: pts, fill: color, "fill-opacity": op, stroke: color, "stroke-width": w }));
+  };
+  if (phone !== base) shape(base, "#E07B39", 0.10, 1.5);
+  shape(phone, "#4C72B0", 0.22, 2);
+  const ly = H - 14;
+  svg.appendChild(el("rect", { x: 20, y: ly - 9, width: 12, height: 4, fill: "#4C72B0" }));
+  svg.appendChild(el("text", { x: 38, y: ly - 4, "font-size": 10 }, short(phone, 30)));
+  if (phone !== base) {
+    svg.appendChild(el("rect", { x: 225, y: ly - 9, width: 12, height: 4, fill: "#E07B39" }));
+    svg.appendChild(el("text", { x: 243, y: ly - 4, "font-size": 10 }, "Base: " + short(base, 24)));
+  }
+  return svg;
+}
+function advantageBars(phone, base) {
+  const row = DATA.comp[base][phone];
+  let html = '<div class="adv">';
+  for (const s of activeCompared()) {
+    const [text, verdict, ratio, status] = row[s];
+    if (status !== "ok" || verdict === null) continue;
+    const adv = ratio === null ? 0 : ratio * (DATA.specTypes[s] === "lower" ? -1 : 1);
+    const pct = Math.max(-1, Math.min(1, adv / 1.5)) * 50;
+    const color = verdict > 0 ? "var(--good)" : verdict < 0 ? "var(--bad)" : "#999";
+    const left = pct >= 0 ? 50 : 50 + pct, width = Math.abs(pct);
+    const lblPos = pct >= 0 ? `left:calc(${50 + width}% + 4px)` : `right:calc(${50 + width}% + 4px)`;
+    html += `<div>${esc(s)}</div><div class="track"><div class="fill" style="left:${left}%;width:${width}%;background:${color}"></div>
+             <div class="lbl" style="${lblPos};color:${color}">${esc(text)}</div></div>`;
+  }
+  return html + "</div>";
+}
+function renderPhones(g) {
+  const box = $("#phone-cards"); box.innerHTML = "";
+  const base = state.base;
+  for (const n of activePhones()) {
+    const div = document.createElement("div");
+    div.className = "phone" + (n === base ? " isbase" : "");
+    div.id = "card-" + DATA.phones.indexOf(n);
+    const facts = DATA.facts[n].map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+    div.innerHTML = `<h3>${esc(n)}${n === base ? " (base)" : ""}</h3>
+      <details><summary class="muted">Specs and notes</summary><dl>${facts}</dl></details>
+      <div class="cols"><div><h4>vs base</h4>${n === base ? '<p class="muted">This is the base phone.</p>' : advantageBars(n, base)}</div>
+      <div class="radar"></div></div>`;
+    div.querySelector(".radar").appendChild(radar(n, base, g));
+    box.appendChild(div);
+  }
+  $("#jump-phone").innerHTML = activePhones().map((n) => `<option value="card-${DATA.phones.indexOf(n)}">${esc(n)}</option>`).join("");
+}
+$("#jump-phone").addEventListener("change", (e) => document.getElementById(e.target.value)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+function renderReport() {
+  renderBaseSelect();
+  const g = goodness(activePhones());
+  renderHighlights(g); renderBest(g); renderComparison(); renderValues(); renderHeat(g); renderSpecCharts(); renderPhones(g);
+  updateHash();
+}
+let currentTab = "home";
+function updateHash() {
+  const h = new URLSearchParams({ base: state.base });
+  if (currentTab !== "home") h.set("tab", currentTab);
+  if (currentTab === "add" && state.editing) h.set("edit", state.editing);
+  history.replaceState(null, "", "#" + h.toString());
+}
+
+// ================================================================== phones tab
+function renderPhonePicker() {
+  const cols = DATA.columns.slice(0, 4);
+  const filter = $("#phone-filter").value.toLowerCase();
+  let html = `<tr><th></th><th>${esc(DATA.nameColumn)}</th>` + cols.map((c) => `<th>${esc(c)}</th>`).join("") + "<th></th></tr>";
+  for (const n of DATA.phones) {
+    const text = (n + " " + cols.map((c) => DATA.values[n][c]).join(" ")).toLowerCase();
+    if (filter && !text.includes(filter)) continue;
+    const on = state.phones.has(n);
+    html += `<tr class="${on ? "" : "off"}" data-name="${esc(n)}"><td><input type="checkbox" ${on ? "checked" : ""}></td><td>${esc(n)}${n === state.base ? ' <span class="tag">base</span>' : ""}</td>` +
+      cols.map((c) => `<td>${esc(DATA.values[n][c])}</td>`).join("") +
+      `<td class="act"><button class="btn small" data-edit="${esc(n)}" title="Correct this phone's specs">✎ Edit</button></td></tr>`;
+  }
+  $("#pick-phones").innerHTML = html;
+  $("#phone-count").textContent = `${state.phones.size} of ${DATA.phones.length} selected`;
+}
+$("#pick-phones").addEventListener("click", (e) => {
+  const edit = e.target.closest("[data-edit]");
+  if (edit) { startEdit(edit.dataset.edit); return; }
+  const tr = e.target.closest("tr[data-name]"); if (!tr) return;
+  const n = tr.dataset.name;
+  if (state.phones.has(n)) { if (state.phones.size === 1) { toast("Keep at least one phone selected."); renderPhonePicker(); return; } state.phones.delete(n); }
+  else state.phones.add(n);
+  changed();
+});
+$$("[data-phones]").forEach((b) => b.addEventListener("click", () => {
+  const mode = b.dataset.phones;
+  if (mode === "all") DATA.phones.forEach((n) => state.phones.add(n));
+  if (mode === "none") { state.phones.clear(); state.phones.add(state.base); toast("Kept only the base phone selected."); }
+  if (mode === "invert") { const next = DATA.phones.filter((n) => !state.phones.has(n)); if (next.length) { state.phones = new Set(next); } }
+  changed();
+}));
+$("#phone-filter").addEventListener("input", renderPhonePicker);
+
+// ================================================================== specs tab
+const TYPE_LABEL = { higher: "Higher is better", lower: "Lower is better", ranked: "Ranked (rank files)", info: "Info only (not compared)", "": "No type yet (add it to specs.csv)" };
+function renderSpecPicker() {
+  const groups = {};
+  for (const c of DATA.columns) (groups[DATA.specTypes[c]] ??= []).push(c);
+  let html = "";
+  for (const type of ["higher", "lower", "ranked", "info", ""]) {
+    if (!groups[type]) continue;
+    html += `<div class="card"><h4>${TYPE_LABEL[type]}</h4>` + groups[type].map((c) => {
+      const on = state.specs.has(c);
+      const calc = DATA.derived && DATA.derived[c] ? ` <span class="tag">calculated</span>` : "";
+      const note = calc + (DATA.specNotes[c] ? ` <span class="muted">· ${esc(DATA.specNotes[c])}</span>` : "");
+      return `<label class="${on ? "" : "off"}"><input type="checkbox" data-spec="${esc(c)}" ${on ? "checked" : ""}> ${esc(c)}${note}</label>`;
+    }).join("") + "</div>";
+  }
+  $("#pick-specs").innerHTML = html;
+  $("#spec-count").textContent = `${activeColumns().length} of ${DATA.columns.length} selected`;
+}
+$("#pick-specs").addEventListener("change", (e) => {
+  const c = e.target.dataset.spec; if (!c) return;
+  e.target.checked ? state.specs.add(c) : state.specs.delete(c);
+  changed();
+});
+$$("[data-specs]").forEach((b) => b.addEventListener("click", () => {
+  if (b.dataset.specs === "all") DATA.columns.forEach((c) => state.specs.add(c)); else state.specs.clear();
+  changed();
+}));
+
+// ================================================================== save selection (app mode)
+$$(".save-sel").forEach((b) => b.addEventListener("click", async () => {
+  try {
+    await api("api/selection", { phones_off: DATA.phones.filter((n) => !state.phones.has(n)),
+                                 specs_off: DATA.columns.filter((c) => !state.specs.has(c)) });
+    toast("Saved to data/selection.json.\nThe CSVs and the Quarto report will use this selection too.");
+  } catch (err) { toast("⚠ " + err.message, 6000); }
+}));
+$$(".save-note").forEach((p) => (p.textContent = SERVER ? "Changes apply instantly. 'Save as default' remembers them (data/selection.json) for next time and for the CSV/Quarto outputs."
+                                                       : "Changes apply instantly to this page. To remember them, open the report with run_app.bat and use 'Save as default'."));
+
+// ================================================================== add-phone tab
+const fileColumns = () => DATA.columns.filter((c) => !(DATA.derived && DATA.derived[c]));   // calculated specs aren't typed
+function renderAddForm() {
+  const f = $("#add-form");
+  let html = `<div class="field"><label for="f-name">${esc(DATA.nameColumn)} *</label>
+    <input id="f-name" name="${esc(DATA.nameColumn)}" required placeholder="e.g. Lenovo Yoga Slim 7 14 (Ryzen AI 7 350)">
+    <span class="hint" id="name-status">A new name adds a phone; an existing name replaces that phone's data.</span></div>`;
+  for (const c of DATA.columns) {
+    const type = DATA.specTypes[c], id = "f-" + c.replace(/\W+/g, "_");
+    const wide = type === "info" && /note/i.test(c);
+    html += `<div class="field${wide ? " wide" : ""}"><label for="${id}">${esc(c)} <span class="tag">${esc(type || "no type")}</span></label>`;
+    if (DATA.derived && DATA.derived[c]) {
+      html += `<input id="${id}" data-derived="${esc(c)}" disabled placeholder="calculated automatically">
+        <span class="hint">Calculated from ${esc(DATA.derived[c])} when you save.</span>`;
+    } else if (type === "ranked") {
+      const known = DATA.rankValues[c] || [];
+      html += `<input id="${id}" name="${esc(c)}" list="dl-${id}" data-ranked="${esc(c)}" placeholder="pick or type a new one">
+        <datalist id="dl-${id}">${known.map((v) => `<option value="${esc(v)}">`).join("")}</datalist>
+        <div class="newrank" data-for="${esc(c)}">
+          <span class="full">New value: give it a rank to add it to ranks/${esc(DATA.rankFiles[c] || "…")} (1 = best; current best → worst: ${esc(known.join(" › ") || "none")})</span>
+          <input name="__rank" placeholder="Rank (1 = best)" inputmode="decimal">
+          <input name="__score" placeholder="Score (optional)" inputmode="decimal">
+          <input name="__details" placeholder="Details (optional)" style="grid-column:1/-1">
+        </div>`;
+    } else if (type === "higher" || type === "lower") {
+      html += `<input id="${id}" name="${esc(c)}" inputmode="decimal" placeholder="number">`;
+    } else if (wide) {
+      html += `<textarea id="${id}" name="${esc(c)}" rows="2"></textarea>`;
+    } else {
+      html += `<input id="${id}" name="${esc(c)}">`;
+    }
+    html += "</div>";
+  }
+  html += `<div class="actions">
+      <button type="submit" class="btn primary" ${SERVER ? "" : "disabled"}>Add phone</button>
+      <button type="button" class="btn" id="copy-row">Copy CSV row</button>
+      <button type="reset" class="btn">Clear</button>
+      <span class="muted">* required. Numbers can use , or . for decimals.</span></div>`;
+  f.innerHTML = html;
+  f.querySelectorAll("[data-ranked]").forEach((inp) => inp.addEventListener("input", () => {
+    const known = DATA.rankValues[inp.dataset.ranked] || [];
+    f.querySelector(`.newrank[data-for="${CSS.escape(inp.dataset.ranked)}"]`).classList.toggle("show", !!inp.value.trim() && !known.includes(inp.value.trim()));
+  }));
+  f.addEventListener("reset", () => setTimeout(() => { f.querySelectorAll(".newrank").forEach((d) => d.classList.remove("show")); updateNameStatus(); }, 0));
+  f.querySelector("#f-name").addEventListener("input", updateNameStatus);
+}
+// tell the user, while typing, whether saving will ADD a new phone or REPLACE an existing one
+function updateNameStatus() {
+  const name = $("#f-name").value.trim(), exists = DATA.phones.includes(name);
+  const submit = $('#add-form button[type="submit"]'), st = $("#name-status");
+  if (submit) submit.textContent = exists ? "Save (replace data)" : "Add phone";
+  st.innerHTML = !name ? "A new name adds a phone; an existing name replaces that phone's data."
+    : exists ? `<b style="color:var(--miss-t)">Already in the list:</b> saving replaces the data of <b>${esc(name)}</b>.`
+             : (state.editing ? `<b style="color:var(--other)">New name:</b> saving creates a new phone (<b>${esc(state.editing)}</b> stays as it is).`
+                              : `<b style="color:var(--good)">New phone</b>: it will be added to the list.`);
+}
+function readForm() {
+  const f = $("#add-form"), values = {}, ranks = {};
+  values[DATA.nameColumn] = f.querySelector("#f-name").value.trim();
+  for (const c of fileColumns()) {
+    const inp = f.querySelector(`[name="${CSS.escape(c)}"]`);
+    values[c] = inp ? inp.value.trim() : "";
+    const nr = f.querySelector(`.newrank[data-for="${CSS.escape(c)}"]`);
+    if (nr && nr.classList.contains("show")) {
+      ranks[c] = { rank: nr.querySelector('[name="__rank"]').value, score: nr.querySelector('[name="__score"]').value,
+                   details: nr.querySelector('[name="__details"]').value };
+    }
+  }
+  return { values, ranks };
+}
+$("#add-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const { values, ranks } = readForm();
+  const box = $("#add-result");
+  try {
+    const res = await api("api/phones", { values, ranks });   // same name = replace, new name = add
+    box.innerHTML = `<div class="alerts ok"><b>Done.</b><ul>${res.messages.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>Reloading…</div>`;
+    setTimeout(() => location.reload(), 1800);
+  } catch (err) {
+    box.innerHTML = `<div class="alerts bad">⚠ ${esc(err.message)}</div>`;
+  }
+});
+document.addEventListener("click", (e) => {
+  if (e.target.id !== "copy-row") return;
+  const { values } = readForm();
+  const cells = [values[DATA.nameColumn], ...fileColumns().map((c) => values[c])].map((v) => /[",;\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const line = cells.join(",");
+  $("#add-result").innerHTML = `<p class="muted">Paste this line at the end of <code>data/phones.csv</code>:</p><pre class="row">${esc(line)}</pre>`;
+  navigator.clipboard?.writeText(line).then(() => toast("CSV row copied to the clipboard."), () => {});
+});
+
+// ================================================================== edit mode
+function setFormMode(name) {
+  state.editing = name;
+  $("#add-title").textContent = name ? "Edit phone" : "Add a phone";
+  $("#add-tab-btn").textContent = name ? "Edit phone" : "Add phone";
+  updateNameStatus();
+  const help = $("#add-help"); if (help) help.style.display = name ? "none" : "";
+  const banner = $("#edit-banner");
+  banner.style.display = name ? "block" : "none";
+  banner.innerHTML = name ? `Editing <b>${esc(name)}</b>: every field shows its current data. Change what was wrong and save.
+    <b>Same name</b> → its data is replaced. <b>Different name</b> → a new phone is created and this one is kept.
+    <button type="button" class="btn small" id="cancel-edit">Cancel</button>` : "";
+  $("#add-result").innerHTML = "";
+}
+function startEdit(name) {
+  const f = $("#add-form");
+  state.editing = null;   // so the reset below doesn't schedule leaving edit mode
+  f.reset();
+  f.querySelector("#f-name").value = name;
+  const src = (DATA.raw && DATA.raw[name]) || DATA.values[name] || {};    // values exactly as typed in the CSV
+  for (const c of DATA.columns) {
+    const inp = f.querySelector(`[name="${CSS.escape(c)}"]`);
+    if (inp) { inp.value = src[c] ?? ""; inp.dispatchEvent(new Event("input")); }
+    const d = f.querySelector(`[data-derived="${CSS.escape(c)}"]`);
+    if (d) d.value = src[c] ?? "";
+  }
+  setFormMode(name);
+  showTab("add");
+}
+document.addEventListener("click", (e) => {
+  if (e.target.id === "cancel-edit") { $("#add-form").reset(); setFormMode(null); showTab("phones"); }
+});
+$("#add-form").addEventListener("reset", () => { if (state.editing) setTimeout(() => setFormMode(null), 0); });
+
+// ================================================================== tabs & wiring
+function showTab(name) {
+  $$(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  $$("section.tab").forEach((s) => s.classList.toggle("active", s.id === "tab-" + name));
+  currentTab = name; updateHash();
+  $("#base-bar").classList.toggle("hidden", !["home", "perspec", "perphone"].includes(name));
+  $("#home-nav").style.display = name === "home" ? "" : "none";
+  if (name === "add" && !state.editing) setFormMode(null);
+  window.scrollTo({ top: 0 });
+}
+document.addEventListener("click", (e) => {
+  const go = e.target.closest("[data-goto]");
+  if (go) { e.preventDefault(); if (go.dataset.goto === "add") { $("#add-form").reset(); setFormMode(null); } showTab(go.dataset.goto); return; }
+  const jump = e.target.closest("[data-jump]");
+  if (jump) { e.preventDefault(); document.getElementById(jump.dataset.jump)?.scrollIntoView({ behavior: "smooth", block: "start" }); }
+});
+$$(".tabs button").forEach((b) => b.addEventListener("click", () => {
+  if (b.dataset.tab === "add" && state.editing && currentTab !== "add") { $("#add-form").reset(); setFormMode(null); }
+  showTab(b.dataset.tab);
+}));
+$("#base").addEventListener("change", (e) => { state.base = e.target.value; changed(); });
+function changed() { renderReport(); renderPhonePicker(); renderSpecPicker(); }
+
+const params = new URLSearchParams(location.hash.slice(1));
+const fromHash = params.get("base");
+if (fromHash && DATA.phones.includes(fromHash)) { state.base = fromHash; state.phones.add(fromHash); }
+renderIssues(); renderAddForm(); changed();
+showTab(["perspec", "perphone", "phones", "specs", "add"].includes(params.get("tab")) ? params.get("tab") : "home");
+if (DATA.phones.includes(params.get("edit"))) startEdit(params.get("edit"));
+</script>
+</body>
+</html>
